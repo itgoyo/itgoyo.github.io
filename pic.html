@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高清图片编辑器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #DFD3C3;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #F8EDE3;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #C5705D;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section, .edit-section, .preview-section {
+            background-color: #D0B8A8;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        input[type="file"], input[type="number"], input[type="color"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #C5705D;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #C5705D;
+            font-weight: bold;
+        }
+        button {
+            background-color: #C5705D;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #A84D3B;
+        }
+        #imagePreview {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border: 2px solid #C5705D;
+        }
+        .preview-section {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>高清图片编辑器</h1>
+        <div class="upload-section">
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <div class="edit-section">
+            <label for="width">宽度 (px):</label>
+            <input type="number" id="width" min="1" value="100">
+            
+            <label for="height">高度 (px):</label>
+            <input type="number" id="height" min="1" value="100">
+            
+            <label for="borderRadius">圆角 (px):</label>
+            <input type="number" id="borderRadius" min="0" value="0">
+            
+            <label for="borderWidth">边框宽度 (px):</label>
+            <input type="number" id="borderWidth" min="0" value="0">
+            
+            <label for="borderColor">边框颜色:</label>
+            <input type="color" id="borderColor" value="#C5705D">
+            
+            <label>
+                <input type="checkbox" id="circleMode"> 圆形模式
+            </label>
+        </div>
+        <div class="preview-section">
+            <img id="imagePreview" src="" alt="预览">
+            <button id="downloadBtn">下载图片</button>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreview = document.getElementById('imagePreview');
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const borderRadiusInput = document.getElementById('borderRadius');
+        const borderWidthInput = document.getElementById('borderWidth');
+        const borderColorInput = document.getElementById('borderColor');
+        const circleModeCheckbox = document.getElementById('circleMode');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let originalImage = null;
+        let originalFileName = '';
+
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                originalFileName = file.name;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImage = new Image();
+                    originalImage.onload = function() {
+                        updatePreview();
+                    }
+                    originalImage.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        [widthInput, heightInput, borderRadiusInput, borderWidthInput, borderColorInput, circleModeCheckbox].forEach(input => {
+            input.addEventListener('input', updatePreview);
+        });
+
+        function updatePreview() {
+            if (!originalImage) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            let width = parseInt(widthInput.value);
+            let height = parseInt(heightInput.value);
+            const borderRadius = parseInt(borderRadiusInput.value);
+            const borderWidth = parseInt(borderWidthInput.value);
+            const borderColor = borderColorInput.value;
+            const isCircle = circleModeCheckbox.checked;
+
+            if (isCircle) {
+                width = height = Math.min(width, height);
+            }
+
+            // 设置canvas大小为目标大小的2倍，以提高清晰度
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            ctx.scale(2, 2);
+
+            // 使用更高质量的图像平滑
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // 绘制背景（用于透明图像）
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(0, 0, width, height);
+
+            // 创建裁剪区域
+            ctx.beginPath();
+            if (isCircle) {
+                ctx.arc(width / 2, height / 2, width / 2, 0, Math.PI * 2);
+            } else {
+                ctx.moveTo(borderRadius, 0);
+                ctx.lineTo(width - borderRadius, 0);
+                ctx.quadraticCurveTo(width, 0, width, borderRadius);
+                ctx.lineTo(width, height - borderRadius);
+                ctx.quadraticCurveTo(width, height, width - borderRadius, height);
+                ctx.lineTo(borderRadius, height);
+                ctx.quadraticCurveTo(0, height, 0, height - borderRadius);
+                ctx.lineTo(0, borderRadius);
+                ctx.quadraticCurveTo(0, 0, borderRadius, 0);
+            }
+            ctx.closePath();
+            ctx.clip();
+
+            // 绘制图像
+            ctx.drawImage(originalImage, 0, 0, width, height);
+
+            // 绘制边框
+            if (borderWidth > 0) {
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = borderWidth;
+                ctx.stroke();
+            }
+
+            imagePreview.src = canvas.toDataURL('image/png', 1.0);
+        }
+
+        downloadBtn.addEventListener('click', function() {
+            if (imagePreview.src) {
+                const a = document.createElement('a');
+                a.href = imagePreview.src;
+                
+                // 获取原始文件名和扩展名
+                const lastDotIndex = originalFileName.lastIndexOf('.');
+                const nameWithoutExtension = originalFileName.substring(0, lastDotIndex);
+                const extension = originalFileName.substring(lastDotIndex);
+                
+                // 创建新的文件名
+                const newFileName = nameWithoutExtension + '_ai' + extension;
+                
+                a.download = newFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+    </script>
+</body>
+</html>
