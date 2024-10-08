@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://itgoyo.github.io/name-image-generator.html</loc>
+    
+    <lastmod>2024-10-08</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://itgoyo.github.io/2024/05/27/index/</loc>
     
     <lastmod>2024-10-08</lastmod>
