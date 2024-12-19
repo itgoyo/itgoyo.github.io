@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机倒计时器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .clock-digit {
+            width: 120px;
+            height: 160px;
+            background: #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 96px;
+            font-family: monospace;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-[800px]">
+        <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">随机倒计时器</h1>
+        
+        <div class="space-y-8">
+            <div class="flex space-x-8">
+                <div class="flex-1">
+                    <label class="block text-xl font-medium text-gray-700 mb-2">最小时间（分钟）</label>
+                    <input type="number" 
+                           id="minTime" 
+                           step="0.1" 
+                           min="0" 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-2xl p-4">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xl font-medium text-gray-700 mb-2">最大时间（分钟）</label>
+                    <input type="number" 
+                           id="maxTime" 
+                           step="0.1" 
+                           min="0" 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-2xl p-4">
+                </div>
+            </div>
+            
+            <button id="startButton" class="w-full bg-blue-500 text-white py-4 rounded-md hover:bg-blue-600 transition-colors text-2xl">
+                开始倒计时
+            </button>
+
+            <div id="timer" class="hidden mt-8">
+                <div class="flex justify-center space-x-4">
+                    <!-- Minutes -->
+                    <div class="clock-digit">
+                        <span id="minutes-tens">0</span>
+                    </div>
+                    <div class="clock-digit">
+                        <span id="minutes-ones">0</span>
+                    </div>
+                    
+                    <div class="text-6xl font-bold text-gray-600 flex items-center">:</div>
+                    
+                    <!-- Seconds -->
+                    <div class="clock-digit">
+                        <span id="seconds-tens">0</span>
+                    </div>
+                    <div class="clock-digit">
+                        <span id="seconds-ones">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="alarmSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+</body>
+<script>
+let timer;
+const timerDisplay = document.getElementById('timer');
+const startButton = document.getElementById('startButton');
+const alarmSound = document.getElementById('alarmSound');
+
+// 将分钟转换为毫秒
+function minutesToMilliseconds(minutes) {
+    return Math.round(minutes * 60 * 1000);
+}
+
+// 将毫秒转换为总秒数
+function millisecondsToSeconds(ms) {
+    return Math.floor(ms / 1000);
+}
+
+// 开始倒计时的函数
+function startCountdown() {
+    const minTime = parseFloat(document.getElementById('minTime').value);
+    const maxTime = parseFloat(document.getElementById('maxTime').value);
+    
+    if (isNaN(minTime) || isNaN(maxTime) || minTime > maxTime || minTime < 0) {
+        alert('请输入有效的时间范围！');
+        return;
+    }
+
+    // 转换为毫秒以提高精确度
+    const minMs = minutesToMilliseconds(minTime);
+    const maxMs = minutesToMilliseconds(maxTime);
+    
+    // 随机生成毫秒数
+    const totalMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    let remainingMs = totalMs;
+
+    timerDisplay.classList.remove('hidden');
+    startButton.disabled = true;
+    startButton.classList.add('bg-gray-400');
+    startButton.classList.remove('hover:bg-blue-600');
+
+    updateDisplay(millisecondsToSeconds(remainingMs));
+
+    // 清除可能存在的旧定时器
+    if (timer) clearInterval(timer);
+
+    const startTime = Date.now();
+    timer = setInterval(() => {
+        const elapsedMs = Date.now() - startTime;
+        remainingMs = totalMs - elapsedMs;
+
+        if (remainingMs <= 0) {
+            clearInterval(timer);
+            updateDisplay(0);
+            alarmSound.play();
+            
+            // 监听音频播放结束事件，播放结束后自动开始新的倒计时
+            alarmSound.onended = () => {
+                startCountdown();
+            };
+            return;
+        }
+
+        updateDisplay(millisecondsToSeconds(remainingMs));
+    }, 100); // 更新频率提高到 100ms，使显示更流畅
+}
+
+// 更新显示的函数
+function updateDisplay(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    const minutesTens = Math.floor(minutes / 10);
+    const minutesOnes = minutes % 10;
+    const secondsTens = Math.floor(seconds / 10);
+    const secondsOnes = seconds % 10;
+
+    updateDigit('minutes-tens', minutesTens);
+    updateDigit('minutes-ones', minutesOnes);
+    updateDigit('seconds-tens', secondsTens);
+    updateDigit('seconds-ones', secondsOnes);
+}
+
+function updateDigit(id, value) {
+    const element = document.getElementById(id);
+    if (element.textContent !== value.toString()) {
+        element.textContent = value;
+    }
+}
+
+// 修改点击事件监听器
+startButton.addEventListener('click', startCountdown);
+
+// 双击停止功能
+startButton.addEventListener('dblclick', () => {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+        startButton.disabled = false;
+        startButton.classList.remove('bg-gray-400');
+        startButton.classList.add('hover:bg-blue-600');
+        alarmSound.pause();
+        alarmSound.currentTime = 0;
+        timerDisplay.classList.add('hidden');
+    }
+});
+</script>
+</html> 
