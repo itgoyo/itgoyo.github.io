@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+
+# Keep the canonical crawl map discoverable by search engines.
+Sitemap: https://itgoyo.github.io/sitemap.xml
